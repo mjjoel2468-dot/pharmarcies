@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaCore — Multi-Tenant Pharmacy Operating System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased selection:bg-emerald-500 selection:text-slate-900"
+      x-data="pharmaCoreSystem()" x-init="initSystem()">
+
+    <!-- ==================================================================== -->
+    <!-- 1. ONBOARDING FLOW (< 30 MIN SETUP FOR PHARMACY OWNERS) -->
+    <!-- ==================================================================== -->
+    <div x-show="!config.isOnboarded" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950">
+        <div class="max-w-xl w-full bg-slate-800/80 border border-slate-700/80 backdrop-blur-xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            
+            <!-- Step Progress Indicator -->
+            <div class="flex items-center justify-between mb-8 border-b border-slate-700/60 pb-4">
+                <div>
+                    <span class="text-xs font-bold tracking-widest text-emerald-400 uppercase">System Setup Wizard</span>
+                    <h1 class="text-xl font-bold text-white mt-0.5">Configure Your Pharmacy</h1>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-900/60 border border-slate-700/50 px-3 py-1.5 rounded-full">
+                    <span class="text-xs font-semibold text-emerald-400" x-text="'Step ' + wizardStep + ' of 3'"></span>
+                </div>
+            </div>
+
+            <!-- STEP 1: Pharmacy & Localization Config -->
+            <div x-show="wizardStep === 1" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Pharmacy Business Name</label>
+                    <input type="text" x-model="config.storeName" placeholder="e.g. HealthFirst Pharmacy Kulambiro" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Currency Code</label>
+                        <select x-model="config.currency" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                            <option value="UGX">UGX (Shillings)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="KES">KES (KSh)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Tax / VAT Rate (%)</label>
+                        <input type="number" x-model.number="config.taxRate" placeholder="18" 
+                               class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Global Expiry Warning Threshold</label>
+                    <select x-model.number="config.expiryWarningDays" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                        <option value="30">Alert 30 Days Before Expiry</option>
+                        <option value="60">Alert 60 Days Before Expiry</option>
+                        <option value="90">Alert 90 Days Before Expiry (Recommended)</option>
+                        <option value="180">Alert 180 Days Before Expiry</option>
+                    </select>
+                    <p class="text-[11px] text-slate-400 mt-1">Triggers early warning badges on medicine batches before they spoil.</p>
+                </div>
+
+                <button @click="wizardStep = 2" :disabled="!config.storeName" 
+                        class="w-full mt-6 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
+                    Next: Add Admin User &rarr;
+                </button>
+            </div>
+
+            <!-- STEP 2: Multi-User Account Setup -->
+            <div x-show="wizardStep === 2" class="space-y-4" x-cloak>
+                <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3 text-xs text-slate-300">
+                    Set up your primary Admin Account. Additional Dispenser or Pharmacist accounts can be added from settings later.
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Admin Full Name</label>
+                    <input type="text" x-model="adminForm.name" placeholder="Dr. Sarah Namubiru" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">User Role</label>
+                    <input type="text" value="Administrator (Full Operational Access)" disabled 
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-400 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Admin Passcode / PIN</label>
+                    <input type="password" x-model="adminForm.pin" maxlength="6" placeholder="123456" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition font-mono tracking-widest">
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button @click="wizardStep = 1" class="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3.5 rounded-xl transition">
+                        Back
+                    </button>
+                    <button @click="wizardStep = 3" :disabled="!adminForm.name || !adminForm.pin" 
+                            class="w-2/3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
+                        Next: Initial Inventory &rarr;
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Initial Stock & Pre-load Samples -->
+            <div x-show="wizardStep === 3" class="space-y-4" x-cloak>
+                <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-4 text-xs text-emerald-200">
+                    <p class="font-bold mb-1">Pre-load Essential Medical Inventory?</p>
+                    <p>We can automatically load standard pharmaceutical templates (Amoxicillin, Paracetamol, Metformin) with batch numbers and expiry tracking to save you time.</p>
+                </div>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-900 border border-slate-700 rounded-xl cursor-pointer">
+                    <input type="checkbox" x-model="seedDemoData" class="w-4 h-4 accent-emerald-500 rounded">
+                    <div>
+                        <span class="text-sm font-semibold text-white block">Pre-fill sample drugs & batches</span>
+                        <span class="text-xs text-slate-400">Includes active batches, low-stock items, and upcoming expiries for testing.</span>
+                    </div>
+                </label>
+
+                <div class="flex gap-3 mt-6">
+                    <button @click="wizardStep = 2" class="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3.5 rounded-xl transition">
+                        Back
+                    </button>
+                    <button @click="completeOnboarding()" 
+                            class="w-2/3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
+                        Launch Pharmacy OS
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ==================================================================== -->
+    <!-- 2. CORE SYSTEM WORKSPACE (MAIN APP) -->
+    <!-- ==================================================================== -->
+    <div x-show="config.isOnboarded" class="min-h-screen flex flex-col md:flex-row" x-cloak>
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-full md:w-64 bg-slate-950 border-r border-slate-800 flex-shrink-0 flex flex-col justify-between">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-emerald-400">PharmaCore OS</span>
+                        </div>
+                        <h2 class="text-base font-extrabold text-white mt-1 truncate" x-text="config.storeName"></h2>
+                    </div>
+                </div>
+
+                <!-- Active User Card & Switcher -->
+                <div class="p-4 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-xs font-bold text-emerald-400"
+                             x-text="currentUser.name.substring(0,2).toUpperCase()"></div>
+                        <div>
+                            <p class="text-xs font-bold text-white leading-none" x-text="currentUser.name"></p>
+                            <p class="text-[10px] font-semibold text-slate-400 uppercase mt-0.5" x-text="currentUser.role"></p>
+                        </div>
+                    </div>
+                    <button @click="switchUserPrompt()" class="text-[10px] text-emerald-400 hover:underline font-semibold">Switch</button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-3 space-y-1">
+                    <template x-for="item in navItems">
+                        <button @click="activeTab = item.id" 
+                                :class="activeTab === item.id ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-900 hover:text-white'"
+                                class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition">
+                            <span x-text="item.label"></span>
+                            <!-- Badges for alerts -->
+                            <span x-show="item.id === 'expiry' && getExpiringBatches().length > 0" 
+                                  class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                  x-text="getExpiringBatches().length"></span>
+                            <span x-show="item.id === 'inventory' && getLowStockCount() > 0" 
+                                  class="bg-amber-500 text-slate-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                  x-text="getLowStockCount()"></span>
+                        </button>
+                    </template>
+                </nav>
+            </div>
+
+            <!-- Configuration & Reset Section -->
+            <div class="p-4 border-t border-slate-800">
+                <button @click="activeTab = 'settings'" class="w-full text-left text-xs font-semibold text-slate-400 hover:text-white py-1.5 flex items-center justify-between">
+                    <span>System Settings</span>
+                    <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">JSON</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN DISPLAY AREA -->
+        <main class="flex-1 bg-slate-900 p-6 md:p-8 overflow-y-auto">
+
+            <!-- TAB 1: DISPENSE / LOG STOCK MOVEMENT (IN/OUT) -->
+            <section x-show="activeTab === 'stock-movement'" space-y-6>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 class="text-xl font-extrabold text-white">Stock Movement Ledger</h1>
+                        <p class="text-xs text-slate-400">Record sales (Stock OUT) or batch restocks (Stock IN) with batch validation.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="openStockModal('IN')" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">
+                            + Stock IN (Restock Batch)
+                        </button>
+                        <button @click="openStockModal('OUT')" class="bg-rose-500 hover:bg-rose-400 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                            - Stock OUT (Dispense)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Movement Log Table -->
+                <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl overflow-hidden">
+                    <div class="p-4 border-b border-slate-700/60 flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase text-slate-300">Audit History</h3>
+                        <span class="text-[11px] text-slate-400" x-text="logs.length + ' logged events'"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-slate-400 uppercase border-b border-slate-700/60">
+                                <tr>
+                                    <th class="p-3.5">Timestamp</th>
+                                    <th class="p-3.5">Type</th>
+                                    <th class="p-3.5">Drug / Item</th>
+                                    <th class="p-3.5">Batch #</th>
+                                    <th class="p-3.5">Expiry</th>
+                                    <th class="p-3.5">Qty</th>
+                                    <th class="p-3.5">Logged By</th>
+                                    <th class="p-3.5">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-700/40">
+                                <template x-for="log in logs" :key="log.id">
+                                    <tr class="hover:bg-slate-800/80 transition">
+                                        <td class="p-3.5 text-slate-400 font-mono text-[11px]" x-text="formatDate(log.timestamp)"></td>
+                                        <td class="p-3.5">
+                                            <span :class="log.type === 'IN' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'"
+                                                  class="px-2 py-0.5 rounded-md font-bold text-[10px]" x-text="log.type"></span>
+                                        </td>
+                                        <td class="p-3.5 font-bold text-white" x-text="log.itemName"></td>
+                                        <td class="p-3.5 font-mono text-slate-300" x-text="log.batchNumber"></td>
+                                        <td class="p-3.5 font-mono text-slate-400" x-text="log.expiryDate"></td>
+                                        <td class="p-3.5 font-extrabold text-white" x-text="(log.type === 'IN' ? '+' : '-') + log.qty"></td>
+                                        <td class="p-3.5 text-slate-300" x-text="log.userName"></td>
+                                        <td class="p-3.5 text-slate-400 italic" x-text="log.reason || 'N/A'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: INVENTORY & LOW-STOCK ALERTS -->
+            <section x-show="activeTab === 'inventory'" space-y-6 x-cloak>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 class="text-xl font-extrabold text-white">Stock Level Catalog</h1>
+                        <p class="text-xs text-slate-400">Automatic low-stock threshold monitoring across all pharmaceutical lines.</p>
+                    </div>
+                    <button @click="openAddDrugModal()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">
+                        + Add New Drug Line
+                    </button>
+                </div>
+
+                <!-- Inventory Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="item in inventory" :key="item.id">
+                        <div class="bg-slate-800/60 border rounded-2xl p-4 flex flex-col justify-between"
+                             :class="getTotalStock(item.id) <= item.minThreshold ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-700/60'">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider" x-text="item.category"></span>
+                                        <h3 class="text-base font-bold text-white" x-text="item.name"></h3>
+                                    </div>
+                                    <span x-show="getTotalStock(item.id) <= item.minThreshold" 
+                                          class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                                        LOW STOCK
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 my-3 py-2 border-y border-slate-700/40 text-xs">
+                                    <div>
+                                        <span class="text-slate-400 block text-[10px]">Total Available</span>
+                                        <span class="text-lg font-black text-white" x-text="getTotalStock(item.id) + ' ' + item.unit"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-slate-400 block text-[10px]">Min. Threshold</span>
+                                        <span class="text-sm font-bold text-slate-300" x-text="item.minThreshold + ' ' + item.unit"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Batches summary inside card -->
+                            <div class="space-y-1.5 mt-2">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Active Batches:</p>
+                                <template x-for="batch in getBatchesForItem(item.id)" :key="batch.batchNumber">
+                                    <div class="flex items-center justify-between text-[11px] bg-slate-900/60 px-2.5 py-1 rounded-lg">
+                                        <span class="font-mono text-slate-300" x-text="batch.batchNumber"></span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-slate-400" x-text="'Exp: ' + batch.expiryDate"></span>
+                                            <span class="font-bold text-emerald-400" x-text="batch.qty"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <!-- TAB 3: PHARMACY FEATURE — EXPIRY TRACKING -->
+            <section x-show="activeTab === 'expiry'" space-y-6 x-cloak>
+                <div class="mb-6">
+                    <h1 class="text-xl font-extrabold text-white">Batch Expiry Risk Monitor</h1>
+                    <p class="text-xs text-slate-400">Proactively identify medical batches expiring within the next <span class="text-emerald-400 font-bold" x-text="config.expiryWarningDays + ' days'"></span> to avoid financial loss or safety hazards.</p>
+                </div>
+
+                <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-slate-400 uppercase border-b border-slate-700/60">
+                                <tr>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5">Drug / Item</th>
+                                    <th class="p-3.5">Batch #</th>
+                                    <th class="p-3.5">Qty Remaining</th>
+                                    <th class="p-3.5">Expiry Date</th>
+                                    <th class="p-3.5">Days Left</th>
+                                    <th class="p-3.5">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-700/40">
+                                <template x-for="b in getAllBatchesSortedByExpiry()" :key="b.batchNumber">
+                                    <tr :class="getExpiryStatusClass(b.expiryDate)">
+                                        <td class="p-3.5">
+                                            <span class="px-2 py-0.5 rounded font-bold text-[10px]" 
+                                                  :class="getExpiryBadgeClass(b.expiryDate)"
+                                                  x-text="getExpiryBadgeText(b.expiryDate)"></span>
+                                        </td>
+                                        <td class="p-3.5 font-bold text-white" x-text="getItemName(b.itemId)"></td>
+                                        <td class="p-3.5 font-mono text-slate-300" x-text="b.batchNumber"></td>
+                                        <td class="p-3.5 font-bold text-white" x-text="b.qty"></td>
+                                        <td class="p-3.5 font-mono" x-text="b.expiryDate"></td>
+                                        <td class="p-3.5 font-bold" x-text="getDaysUntil(b.expiryDate) + ' days'"></td>
+                                        <td class="p-3.5">
+                                            <button @click="quarantineBatch(b)" class="bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition px-2.5 py-1 rounded-lg text-[10px] font-semibold">
+                                                Quarantine / Write-Off
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: BASIC REPORTING -->
+            <section x-show="activeTab === 'reports'" space-y-6 x-cloak>
+                <div class="mb-6">
+                    <h1 class="text-xl font-extrabold text-white">Financial & Inventory Summary</h1>
+                    <p class="text-xs text-slate-400">Real-time inventory valuation and dispensing velocity analytics.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Stock Valuation</span>
+                        <p class="text-2xl font-black text-emerald-400 mt-1" x-text="config.currency + ' ' + calculateTotalValue().toLocaleString()"></p>
+                    </div>
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Stocked SKUs</span>
+                        <p class="text-2xl font-black text-white mt-1" x-text="inventory.length"></p>
+                    </div>
+                    <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-2xl">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Batches at Expiry Risk</span>
+                        <p class="text-2xl font-black text-rose-400 mt-1" x-text="getExpiringBatches().length"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: SYSTEM CONFIGURATION (SETTINGS) -->
+            <section x-show="activeTab === 'settings'" space-y-6 x-cloak>
+                <div class="mb-6">
+                    <h1 class="text-xl font-extrabold text-white">System Configuration File</h1>
+                    <p class="text-xs text-slate-400">Zero custom coding required. Adjust settings dynamically or export tenant state.</p>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 max-w-2xl space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Store Name</label>
+                        <input type="text" x-model="config.storeName" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Currency Code</label>
+                        <input type="text" x-model="config.currency" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Expiry Threshold (Days)</label>
+                        <input type="number" x-model.number="config.expiryWarningDays" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white">
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-700/60 flex gap-3">
+                        <button @click="exportConfig()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                            Export Config JSON
+                        </button>
+                        <button @click="resetSystem()" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                            Reset & Run Onboarding Again
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL: STOCK IN / OUT TRANSACTION -->
+    <!-- ==================================================================== -->
+    <div x-show="showStockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 class="text-base font-bold text-white mb-4" x-text="stockModalType === 'IN' ? 'Stock IN (Receive Batch)' : 'Stock OUT (Dispense Medicine)'"></h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Select Medicine</label>
+                    <select x-model="stockForm.itemId" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                        <option value="">-- Choose Item --</option>
+                        <template x-for="item in inventory" :key="item.id">
+                            <option :value="item.id" x-text="item.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Batch Number</label>
+                    <input type="text" x-model="stockForm.batchNumber" placeholder="e.g. BATCH-2026-X" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono">
+                </div>
+
+                <div x-show="stockModalType === 'IN'">
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Batch Expiry Date</label>
+                    <input type="date" x-model="stockForm.expiryDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Quantity</label>
+                    <input type="number" x-model.number="stockForm.qty" placeholder="100" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Note / Reason</label>
+                    <input type="text" x-model="stockForm.reason" placeholder="e.g. Supplier invoice #8812 or Prescription dispense" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+                <button @click="showStockModal = false" class="w-1/2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2.5 rounded-xl">Cancel</button>
+                <button @click="submitStockMovement()" class="w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold py-2.5 rounded-xl">Confirm & Log</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- JAVASCRIPT LOGIC (SINGLE REUSABLE ENGINE) -->
+    <!-- ==================================================================== -->
+    <script>
+        function pharmaCoreSystem() {
+            return {
+                wizardStep: 1,
+                seedDemoData: true,
+                activeTab: 'stock-movement',
+                showStockModal: false,
+                stockModalType: 'IN',
+
+                // DEFAULT CONFIGURATION FILE MODEL
+                config: {
+                    isOnboarded: false,
+                    storeName: '',
+                    currency: 'UGX',
+                    taxRate: 18,
+                    expiryWarningDays: 90
+                },
+
+                adminForm: { name: '', pin: '' },
+
+                currentUser: { id: 'usr-1', name: 'Admin User', role: 'ADMIN' },
+                users: [],
+
+                navItems: [
+                    { id: 'stock-movement', label: 'Stock In/Out Ledger' },
+                    { id: 'inventory', label: 'Inventory & Low Stock' },
+                    { id: 'expiry', label: 'Batch Expiry Risk' },
+                    { id: 'reports', label: 'Financial Reports' },
+                ],
+
+                inventory: [],
+                batches: [],
+                logs: [],
+
+                stockForm: { itemId: '', batchNumber: '', expiryDate: '', qty: 0, reason: '' },
+
+                initSystem() {
+                    const savedConfig = localStorage.getItem('pharma_config');
+                    if (savedConfig) {
+                        this.config = JSON.parse(savedConfig);
+                        this.inventory = JSON.parse(localStorage.getItem('pharma_inventory') || '[]');
+                        this.batches = JSON.parse(localStorage.getItem('pharma_batches') || '[]');
+                        this.logs = JSON.parse(localStorage.getItem('pharma_logs') || '[]');
+                        this.users = JSON.parse(localStorage.getItem('pharma_users') || '[]');
+                        if (this.users.length > 0) this.currentUser = this.users[0];
+                    }
+                },
+
+                completeOnboarding() {
+                    this.config.isOnboarded = true;
+                    
+                    // Register Admin User
+                    const adminUser = { id: 'usr-' + Date.now(), name: this.adminForm.name, role: 'ADMIN' };
+                    this.users.push(adminUser);
+                    this.currentUser = adminUser;
+
+                    // Seed Default Data if requested
+                    if (this.seedDemoData) {
+                        this.inventory = [
+                            { id: 'med-1', name: 'Amoxicillin 500mg Capsules', category: 'Antibiotic', unit: 'Boxes', minThreshold: 15, unitPrice: 25000 },
+                            { id: 'med-2', name: 'Paracetamol 500mg Tablets', category: 'Analgesic', unit: 'Tins', minThreshold: 5, unitPrice: 12000 },
+                            { id: 'med-3', name: 'Metformin 500mg', category: 'Antidiabetic', unit: 'Packs', minThreshold: 20, unitPrice: 18000 }
+                        ];
+
+                        this.batches = [
+                            { id: 'b1', itemId: 'med-1', batchNumber: 'AMX-2025-01', expiryDate: '2026-08-15', qty: 40 },
+                            { id: 'b2', itemId: 'med-1', batchNumber: 'AMX-2026-09', expiryDate: '2026-12-01', qty: 5 },
+                            { id: 'b3', itemId: 'med-2', batchNumber: 'PARA-8812', expiryDate: '2027-05-20', qty: 2 },
+                            { id: 'b4', itemId: 'med-3', batchNumber: 'MET-4011', expiryDate: '2026-08-01', qty: 50 }
+                        ];
+
+                        this.logs = [
+                            { id: 'l1', timestamp: new Date().toISOString(), type: 'IN', itemId: 'med-1', itemName: 'Amoxicillin 500mg Capsules', batchNumber: 'AMX-2025-01', expiryDate: '2026-08-15', qty: 40, userName: this.currentUser.name, reason: 'Initial Supplier Receive' }
+                        ];
+                    }
+
+                    this.saveState();
+                },
+
+                saveState() {
+                    localStorage.setItem('pharma_config', JSON.stringify(this.config));
+                    localStorage.setItem('pharma_inventory', JSON.stringify(this.inventory));
+                    localStorage.setItem('pharma_batches', JSON.stringify(this.batches));
+                    localStorage.setItem('pharma_logs', JSON.stringify(this.logs));
+                    localStorage.setItem('pharma_users', JSON.stringify(this.users));
+                },
+
+                getTotalStock(itemId) {
+                    return this.batches.filter(b => b.itemId === itemId).reduce((sum, b) => sum + b.qty, 0);
+                },
+
+                getLowStockCount() {
+                    return this.inventory.filter(i => this.getTotalStock(i.id) <= i.minThreshold).length;
+                },
+
+                getBatchesForItem(itemId) {
+                    return this.batches.filter(b => b.itemId === itemId && b.qty > 0);
+                },
+
+                openStockModal(type) {
+                    this.stockModalType = type;
+                    this.stockForm = { itemId: '', batchNumber: '', expiryDate: '', qty: 0, reason: '' };
+                    this.showStockModal = true;
+                },
+
+                submitStockMovement() {
+                    if (!this.stockForm.itemId || !this.stockForm.batchNumber || this.stockForm.qty <= 0) return;
+
+                    const item = this.inventory.find(i => i.id === this.stockForm.itemId);
+                    let batch = this.batches.find(b => b.itemId === this.stockForm.itemId && b.batchNumber === this.stockForm.batchNumber);
+
+                    if (this.stockModalType === 'IN') {
+                        if (batch) {
+                            batch.qty += Number(this.stockForm.qty);
+                        } else {
+                            this.batches.push({
+                                id: 'b-' + Date.now(),
+                                itemId: this.stockForm.itemId,
+                                batchNumber: this.stockForm.batchNumber,
+                                expiryDate: this.stockForm.expiryDate || '2027-01-01',
+                                qty: Number(this.stockForm.qty)
+                            });
+                        }
+                    } else { // OUT
+                        if (!batch || batch.qty < this.stockForm.qty) {
+                            alert('Insufficient stock in specified batch!');
+                            return;
+                        }
+                        batch.qty -= Number(this.stockForm.qty);
+                    }
+
+                    // Log event
+                    this.logs.unshift({
+                        id: 'l-' + Date.now(),
+                        timestamp: new Date().toISOString(),
+                        type: this.stockModalType,
+                        itemId: item.id,
+                        itemName: item.name,
+                        batchNumber: this.stockForm.batchNumber,
+                        expiryDate: batch ? batch.expiryDate : this.stockForm.expiryDate,
+                        qty: Number(this.stockForm.qty),
+                        userName: this.currentUser.name,
+                        reason: this.stockForm.reason
+                    });
+
+                    this.saveState();
+                    this.showStockModal = false;
+                },
+
+                getDaysUntil(dateString) {
+                    const diffTime = new Date(dateString) - new Date();
+                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                },
+
+                getExpiringBatches() {
+                    return this.batches.filter(b => b.qty > 0 && this.getDaysUntil(b.expiryDate) <= this.config.expiryWarningDays);
+                },
+
+                getAllBatchesSortedByExpiry() {
+                    return [...this.batches].filter(b => b.qty > 0).sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+                },
+
+                getItemName(itemId) {
+                    const item = this.inventory.find(i => i.id === itemId);
+                    return item ? item.name : 'Unknown Item';
+                },
+
+                getExpiryBadgeClass(dateStr) {
+                    const days = this.getDaysUntil(dateStr);
+                    if (days <= 0) return 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+                    if (days <= 30) return 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                    if (days <= this.config.expiryWarningDays) return 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                    return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                },
+
+                getExpiryBadgeText(dateStr) {
+                    const days = this.getDaysUntil(dateStr);
+                    if (days <= 0) return 'EXPIRED';
+                    if (days <= 30) return 'CRITICAL EXPIRY';
+                    if (days <= this.config.expiryWarningDays) return 'EXPIRING SOON';
+                    return 'HEALTHY';
+                },
+
+                calculateTotalValue() {
+                    return this.inventory.reduce((sum, item) => {
+                        return sum + (this.getTotalStock(item.id) * (item.unitPrice || 0));
+                    }, 0);
+                },
+
+                formatDate(isoStr) {
+                    return new Date(isoStr).toLocaleString();
+                },
+
+                resetSystem() {
+                    if (confirm('Reset system data and run onboarding again?')) {
+                        localStorage.clear();
+                        location.reload();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
