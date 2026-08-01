@@ -48,13 +48,13 @@
       x-data="pharmaCoreSystem()" x-init="initSystem()">
 
     <!-- ==================================================================== -->
-    <!-- ONBOARDING FLOW (< 30 MIN SETUP) -->
+    <!-- ONBOARDING FLOW -->
     <!-- ==================================================================== -->
     <div x-show="!config.isOnboarded" class="min-h-screen flex items-center justify-center p-6 bg-clinical-bg">
         <div class="max-w-xl w-full bg-clinical-card border border-clinical-border rounded-lg p-8 shadow-sm">
             <div class="flex items-center justify-between mb-6 border-b border-clinical-border pb-4">
                 <div>
-                    <span class="text-[11px] font-bold tracking-wider text-brand-teal uppercase">PharmaCore Onboarding</span>
+                    <span class="text-[11px] font-bold tracking-wider text-brand-teal uppercase">PharmaCore Setup</span>
                     <h1 class="text-lg font-bold text-clinical-text mt-0.5">Configure Pharmacy System</h1>
                 </div>
                 <span class="text-xs font-semibold text-clinical-muted bg-clinical-bg border border-clinical-border px-3 py-1 rounded" x-text="'Step ' + wizardStep + ' of 3'"></span>
@@ -88,39 +88,40 @@
                 </div>
 
                 <button @click="wizardStep = 2" :disabled="!config.storeName" class="w-full mt-6 bg-brand-teal hover:bg-brand-tealDark disabled:opacity-50 text-white font-semibold py-2.5 rounded text-xs">
-                    Next: Account Setup &rarr;
+                    Next: Security & Admin Setup &rarr;
                 </button>
             </div>
 
-            <!-- STEP 2: Role Setup -->
+            <!-- STEP 2: Role & PIN Setup -->
             <div x-show="wizardStep === 2" class="space-y-4" x-cloak>
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Owner / Administrator Name</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Owner / Manager Name</label>
                     <input type="text" x-model="adminForm.name" placeholder="Dr. Sarah Namubiru" 
                            class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs focus:outline-none focus:border-brand-teal">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Admin Security PIN</label>
-                    <input type="password" x-model="adminForm.pin" maxlength="6" placeholder="123456" 
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Owner Security PIN (For Viewing Reports)</label>
+                    <input type="password" x-model="config.ownerPin" maxlength="6" placeholder="Set 4 to 6 digit PIN (e.g. 1234)" 
                            class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-brand-teal">
+                    <p class="text-[10px] text-clinical-muted mt-1">This PIN will be required to unlock financial & business reports.</p>
                 </div>
 
                 <div class="flex gap-3 mt-6">
                     <button @click="wizardStep = 1" class="w-1/3 bg-slate-200 text-clinical-text font-semibold py-2.5 rounded text-xs">Back</button>
-                    <button @click="wizardStep = 3" :disabled="!adminForm.name || !adminForm.pin" class="w-2/3 bg-brand-teal hover:bg-brand-tealDark disabled:opacity-50 text-white font-semibold py-2.5 rounded text-xs">Next: Formulary &rarr;</button>
+                    <button @click="wizardStep = 3" :disabled="!adminForm.name || !config.ownerPin" class="w-2/3 bg-brand-teal hover:bg-brand-tealDark disabled:opacity-50 text-white font-semibold py-2.5 rounded text-xs">Next: Database Options &rarr;</button>
                 </div>
             </div>
 
             <!-- STEP 3: Initial Seed Data -->
             <div x-show="wizardStep === 3" class="space-y-4" x-cloak>
                 <div class="bg-brand-tealLight border border-brand-tealBorder rounded p-4 text-xs text-brand-tealDark">
-                    <p class="font-bold mb-1">Pre-load Sample Pharmacy Data?</p>
-                    <p>Includes initial drug lines, suppliers, batch numbers, cost/selling prices, and near-expiry demo items.</p>
+                    <p class="font-bold mb-1">Pre-load Demo Data?</p>
+                    <p>Includes initial drug lines, sample batches, and near-expiry demo items for testing. You can clear this anytime in Settings.</p>
                 </div>
 
                 <label class="flex items-center gap-3 p-3 bg-white border border-clinical-border rounded cursor-pointer">
                     <input type="checkbox" x-model="seedDemoData" class="w-4 h-4 accent-brand-teal rounded">
-                    <span class="text-xs font-semibold text-clinical-text">Pre-fill standard medicine templates & batches</span>
+                    <span class="text-xs font-semibold text-clinical-text">Pre-fill sample pharmacy items & batches</span>
                 </label>
 
                 <div class="flex gap-3 mt-6">
@@ -148,27 +149,29 @@
                     <h2 class="text-sm font-bold text-clinical-text mt-0.5 truncate" x-text="config.storeName"></h2>
                 </div>
 
-                <!-- User Profile & Role Switcher -->
+                <!-- User Profile & Active Role Indicator -->
                 <div class="p-3 bg-clinical-bg border-b border-clinical-border flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold text-clinical-text" x-text="currentUser.name"></p>
-                        <span class="text-[10px] font-semibold text-brand-teal uppercase" x-text="currentUser.role"></span>
+                        <span class="text-[10px] font-semibold uppercase" 
+                              :class="isOwnerUnlocked ? 'text-brand-teal font-bold' : 'text-clinical-muted'" 
+                              x-text="isOwnerUnlocked ? 'OWNER (UNLOCKED)' : 'DISPENSER / STAFF'"></span>
                     </div>
-                    <button @click="toggleUserRole()" class="text-[10px] bg-white border border-clinical-border px-2 py-1 rounded text-clinical-muted hover:text-clinical-text font-semibold">
-                        Switch Role
+                    <button x-show="isOwnerUnlocked" @click="lockOwnerAccess()" class="text-[10px] bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700 font-semibold">
+                        Lock Owner Session
                     </button>
                 </div>
 
                 <!-- Navigation Links -->
                 <nav class="p-2 space-y-1">
-                    <!-- 1. Stock Movement (All Roles) -->
+                    <!-- 1. Stock Movement -->
                     <button @click="activeTab = 'stock-movement'" 
                             :class="activeTab === 'stock-movement' ? 'bg-brand-tealLight text-brand-teal font-semibold border border-brand-tealBorder' : 'text-clinical-muted hover:bg-clinical-bg'"
                             class="w-full flex items-center justify-between px-3 py-2 rounded text-xs transition">
                         <span>Stock In/Out Logging</span>
                     </button>
 
-                    <!-- 2. Catalog & Reorder (All Roles) -->
+                    <!-- 2. Catalog -->
                     <button @click="activeTab = 'inventory'" 
                             :class="activeTab === 'inventory' ? 'bg-brand-tealLight text-brand-teal font-semibold border border-brand-tealBorder' : 'text-clinical-muted hover:bg-clinical-bg'"
                             class="w-full flex items-center justify-between px-3 py-2 rounded text-xs transition">
@@ -176,7 +179,7 @@
                         <span x-show="getLowStockCount() > 0" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.2 rounded" x-text="getLowStockCount()"></span>
                     </button>
 
-                    <!-- 3. Expiry Dashboard (All Roles) -->
+                    <!-- 3. Expiry Dashboard -->
                     <button @click="activeTab = 'expiry'" 
                             :class="activeTab === 'expiry' ? 'bg-expiry-purpleLight text-expiry-purple font-semibold border border-expiry-purpleBorder' : 'text-clinical-muted hover:bg-clinical-bg'"
                             class="w-full flex items-center justify-between px-3 py-2 rounded text-xs transition">
@@ -184,19 +187,20 @@
                         <span x-show="getExpiringBatches().length > 0" class="bg-expiry-purpleLight text-expiry-purple text-[10px] font-bold px-1.5 py-0.2 rounded" x-text="getExpiringBatches().length"></span>
                     </button>
 
-                    <!-- 4. Reports (OWNER/ADMIN ONLY) -->
-                    <template x-if="currentUser.role === 'OWNER'">
-                        <button @click="activeTab = 'reports'" 
-                                :class="activeTab === 'reports' ? 'bg-brand-tealLight text-brand-teal font-semibold border border-brand-tealBorder' : 'text-clinical-muted hover:bg-clinical-bg'"
-                                class="w-full flex items-center justify-between px-3 py-2 rounded text-xs transition">
+                    <!-- 4. Reports (PIN PROTECTED) -->
+                    <button @click="handleReportsTabClick()" 
+                            :class="activeTab === 'reports' ? 'bg-brand-tealLight text-brand-teal font-semibold border border-brand-tealBorder' : 'text-clinical-muted hover:bg-clinical-bg'"
+                            class="w-full flex items-center justify-between px-3 py-2 rounded text-xs transition">
+                        <span class="flex items-center gap-1.5">
                             <span>Business Reports</span>
-                            <span class="text-[9px] bg-slate-200 text-slate-700 px-1 rounded uppercase font-bold">Owner</span>
-                        </button>
-                    </template>
+                            <span x-show="!isOwnerUnlocked" class="text-[9px]">🔒</span>
+                        </span>
+                        <span class="text-[9px] bg-slate-100 text-slate-600 px-1 rounded uppercase font-bold">Protected</span>
+                    </button>
                 </nav>
             </div>
 
-            <!-- Settings -->
+            <!-- System Settings -->
             <div class="p-3 border-t border-clinical-border">
                 <button @click="activeTab = 'settings'" class="w-full text-left text-xs text-clinical-muted hover:text-clinical-text py-1 flex items-center justify-between">
                     <span>System Settings</span>
@@ -205,7 +209,7 @@
             </div>
         </aside>
 
-        <!-- MAIN DISPLAY -->
+        <!-- MAIN DISPLAY AREA -->
         <main class="flex-1 bg-clinical-bg p-6 overflow-y-auto">
 
             <!-- 1. STOCK IN / OUT LOGGING -->
@@ -241,10 +245,7 @@
                                     <th class="p-3">Batch Number</th>
                                     <th class="p-3">Batch Expiry</th>
                                     <th class="p-3">Qty</th>
-                                    <!-- Hide pricing column from staff if configured -->
-                                    <template x-if="currentUser.role === 'OWNER'">
-                                        <th class="p-3">Total Value</th>
-                                    </template>
+                                    <th x-show="isOwnerUnlocked" class="p-3">Total Value</th>
                                     <th class="p-3">Logged By</th>
                                 </tr>
                             </thead>
@@ -260,27 +261,28 @@
                                         <td class="p-3 text-clinical-muted" x-text="log.batchNumber"></td>
                                         <td class="p-3 text-clinical-muted" x-text="log.expiryDate"></td>
                                         <td class="p-3 font-bold text-clinical-text" x-text="(log.type === 'IN' ? '+' : '-') + log.qty"></td>
-                                        <template x-if="currentUser.role === 'OWNER'">
-                                            <td class="p-3 text-clinical-text" x-text="config.currency + ' ' + (log.totalPrice || 0).toLocaleString()"></td>
-                                        </template>
+                                        <td x-show="isOwnerUnlocked" class="p-3 text-clinical-text" x-text="config.currency + ' ' + (log.totalPrice || 0).toLocaleString()"></td>
                                         <td class="p-3 font-sans text-clinical-text" x-text="log.userName"></td>
                                     </tr>
                                 </template>
+                                <tr x-show="logs.length === 0">
+                                    <td colspan="8" class="p-6 text-center text-clinical-muted font-sans text-xs">No transaction logs available. Log Stock IN or Stock OUT above.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- 2. MEDICINE ITEMS CATALOG & REORDER ALERTS -->
+            <!-- 2. MEDICINE ITEMS CATALOG -->
             <section x-show="activeTab === 'inventory'" class="space-y-6" x-cloak>
                 <div class="flex justify-between items-center">
                     <div>
                         <h1 class="text-lg font-bold text-clinical-text">Medicine Items Catalog</h1>
-                        <p class="text-xs text-clinical-muted">Real-time quantity on hand and low-stock reorder alerts.</p>
+                        <p class="text-xs text-clinical-muted">Real-time quantity on hand and reorder alerts.</p>
                     </div>
                     <button @click="openAddMedicineModal()" class="bg-brand-teal hover:bg-brand-tealDark text-white font-semibold px-3.5 py-2 rounded text-xs">
-                        + Add Medicine Item
+                        + Add New Medicine Line
                     </button>
                 </div>
 
@@ -291,10 +293,9 @@
                             <div>
                                 <div class="flex justify-between items-start mb-2">
                                     <div>
-                                        <span class="text-[10px] font-semibold text-clinical-muted uppercase" x-text="item.supplier"></span>
+                                        <span class="text-[10px] font-semibold text-clinical-muted uppercase" x-text="item.supplier || 'General Supplier'"></span>
                                         <h3 class="text-sm font-bold text-clinical-text" x-text="item.name"></h3>
                                     </div>
-                                    <!-- Low Stock Alert -->
                                     <span x-show="getTotalStock(item.id) <= item.reorderThreshold" 
                                           class="bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded">
                                         LOW STOCK
@@ -307,18 +308,16 @@
                                         <span class="text-base font-bold text-clinical-text" x-text="getTotalStock(item.id) + ' units'"></span>
                                     </div>
                                     <div>
-                                        <span class="text-clinical-muted block text-[10px] uppercase">Reorder Threshold</span>
+                                        <span class="text-clinical-muted block text-[10px] uppercase">Reorder Level</span>
                                         <span class="text-xs font-semibold text-clinical-muted" x-text="item.reorderThreshold + ' units'"></span>
                                     </div>
                                 </div>
 
                                 <!-- Owner Pricing View -->
-                                <template x-if="currentUser.role === 'OWNER'">
-                                    <div class="flex justify-between text-[11px] bg-slate-50 p-2 rounded mb-3">
-                                        <span>Unit Cost: <strong x-text="config.currency + ' ' + item.unitCost"></strong></span>
-                                        <span>Selling: <strong class="text-brand-teal" x-text="config.currency + ' ' + item.sellingPrice"></strong></span>
-                                    </div>
-                                </template>
+                                <div x-show="isOwnerUnlocked" class="flex justify-between text-[11px] bg-slate-50 p-2 rounded mb-3">
+                                    <span>Cost: <strong x-text="config.currency + ' ' + (item.unitCost || 0).toLocaleString()"></strong></span>
+                                    <span>Selling: <strong class="text-brand-teal" x-text="config.currency + ' ' + (item.sellingPrice || 0).toLocaleString()"></strong></span>
+                                </div>
                             </div>
 
                             <!-- Batches Breakdown -->
@@ -333,9 +332,13 @@
                                         </div>
                                     </div>
                                 </template>
+                                <span x-show="getBatchesForItem(item.id).length === 0" class="text-[10px] text-clinical-muted italic block">No active batch inventory.</span>
                             </div>
                         </div>
                     </template>
+                </div>
+                <div x-show="inventory.length === 0" class="bg-white border border-clinical-border p-8 text-center rounded text-clinical-muted text-xs">
+                    No medicine items in database. Click "+ Add New Medicine Line" to populate inventory.
                 </div>
             </section>
 
@@ -388,27 +391,35 @@
                                         </td>
                                     </tr>
                                 </template>
+                                <tr x-show="batches.length === 0">
+                                    <td colspan="7" class="p-6 text-center text-clinical-muted font-sans text-xs">No active batches registered.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- 4. BUSINESS REPORTS (RESTRICTED TO OWNER/ADMIN) -->
-            <section x-show="activeTab === 'reports' && currentUser.role === 'OWNER'" class="space-y-6" x-cloak>
-                <div>
-                    <h1 class="text-lg font-bold text-clinical-text">Business & Financial Analytics</h1>
-                    <p class="text-xs text-clinical-muted">Restricted Owner View — Executive reports and loss quantification.</p>
+            <!-- 4. BUSINESS REPORTS (PIN PROTECTED OWNER ACCESS ONLY) -->
+            <section x-show="activeTab === 'reports' && isOwnerUnlocked" class="space-y-6" x-cloak>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-lg font-bold text-clinical-text">Business & Financial Analytics</h1>
+                        <p class="text-xs text-clinical-muted">Protected Business Owner View — Executive reports and loss metrics.</p>
+                    </div>
+                    <button @click="lockOwnerAccess()" class="bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded hover:bg-slate-300">
+                        🔒 Lock Reports View
+                    </button>
                 </div>
 
                 <!-- Core Financial Metrics -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-white border border-clinical-border p-4 rounded">
-                        <span class="text-clinical-muted text-[10px] font-semibold uppercase">Total Inventory Valuation (Capital Tied)</span>
+                        <span class="text-clinical-muted text-[10px] font-semibold uppercase">Total Stock Capital Value</span>
                         <p class="text-xl font-bold text-brand-teal mt-1 font-mono" x-text="config.currency + ' ' + calculateTotalValue().toLocaleString()"></p>
                     </div>
                     <div class="bg-white border border-clinical-border p-4 rounded">
-                        <span class="text-clinical-muted text-[10px] font-semibold uppercase">Expired Capital Loss (Loss Quantification)</span>
+                        <span class="text-clinical-muted text-[10px] font-semibold uppercase">Expired Stock Loss Value</span>
                         <p class="text-xl font-bold text-rose-600 mt-1 font-mono" x-text="config.currency + ' ' + calculateExpiredCapitalLoss().toLocaleString()"></p>
                     </div>
                     <div class="bg-white border border-clinical-border p-4 rounded">
@@ -416,58 +427,104 @@
                         <p class="text-xl font-bold text-expiry-purple mt-1 font-mono" x-text="config.currency + ' ' + calculateNearExpiryCapitalRisk().toLocaleString()"></p>
                     </div>
                 </div>
-
-                <!-- Velocity Report -->
-                <div class="bg-white border border-clinical-border rounded p-4">
-                    <h3 class="text-xs font-bold text-clinical-text uppercase mb-3">Fast-Moving vs Slow-Moving Medicine Lines</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div class="bg-clinical-bg p-3 rounded">
-                            <span class="text-[10px] font-bold text-brand-teal uppercase block mb-1">Fast-Moving Items (Highest Velocity)</span>
-                            <template x-for="item in inventory.slice(0,2)" :key="item.id">
-                                <div class="flex justify-between border-b border-clinical-border py-1">
-                                    <span class="font-semibold" x-text="item.name"></span>
-                                    <span class="font-mono text-clinical-muted">High Turnover</span>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="bg-clinical-bg p-3 rounded">
-                            <span class="text-[10px] font-bold text-amber-700 uppercase block mb-1">Slow-Moving Items (Risk of Stagnation)</span>
-                            <template x-for="item in inventory.slice(2)" :key="item.id">
-                                <div class="flex justify-between border-b border-clinical-border py-1">
-                                    <span class="font-semibold" x-text="item.name"></span>
-                                    <span class="font-mono text-clinical-muted">Low Turnover</span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </div>
             </section>
 
-            <!-- 5. CONFIGURATION -->
+            <!-- 5. CONFIGURATION & CLEAR DATA -->
             <section x-show="activeTab === 'settings'" class="space-y-6" x-cloak>
                 <div>
-                    <h1 class="text-lg font-bold text-clinical-text">System Configuration</h1>
-                    <p class="text-xs text-clinical-muted">Manage global settings without modifying underlying codebase.</p>
+                    <h1 class="text-lg font-bold text-clinical-text">System Settings</h1>
+                    <p class="text-xs text-clinical-muted">Manage system configuration, security PIN, and database resets.</p>
                 </div>
 
                 <div class="bg-white border border-clinical-border rounded p-6 max-w-xl space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Store Branding Name</label>
-                        <input type="text" x-model="config.storeName" class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Currency Code</label>
-                        <input type="text" x-model="config.currency" class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs">
+                        <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Pharmacy Name</label>
+                        <input type="text" x-model="config.storeName" @change="saveState()" class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs">
                     </div>
 
-                    <div class="pt-4 border-t border-clinical-border flex gap-3">
-                        <button @click="exportConfig()" class="bg-slate-100 border border-clinical-border text-clinical-text text-xs font-semibold px-4 py-2 rounded">Export System State JSON</button>
-                        <button @click="resetSystem()" class="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold px-4 py-2 rounded">Reset System</button>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider mb-1">Update Owner Reports PIN</label>
+                        <input type="password" x-model="config.ownerPin" maxlength="6" @change="saveState()" class="w-full bg-white border border-clinical-borderDark rounded px-3 py-2 text-xs font-mono">
+                    </div>
+
+                    <!-- PRODUCTION RESET / CLEAR DATA SECTION -->
+                    <div class="pt-6 border-t border-clinical-border space-y-3">
+                        <h3 class="text-xs font-bold text-clinical-text uppercase">Data Management & Production Reset</h3>
+                        
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded text-xs space-y-2">
+                            <p class="font-bold text-amber-900">Handing system over to staff?</p>
+                            <p class="text-amber-800">Use the clear option below to wipe all demo inventory, test batches, and transaction logs while keeping your pharmacy configuration and PIN intact.</p>
+                            <button @click="clearOperationalData()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1.5 rounded text-xs">
+                                Clear Stock & Transaction Logs (Fresh Start)
+                            </button>
+                        </div>
+
+                        <div class="p-3 bg-rose-50 border border-rose-200 rounded text-xs space-y-2">
+                            <p class="font-bold text-rose-900">Full System Reset</p>
+                            <p class="text-rose-800">Wipes all data including pharmacy configuration and launches onboarding setup from scratch.</p>
+                            <button @click="fullSystemReset()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3 py-1.5 rounded text-xs">
+                                Complete Factory Reset
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
 
         </main>
+    </div>
+
+    <!-- MODAL: OWNER PIN VERIFICATION -->
+    <div x-show="showPinModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-white border border-clinical-border rounded max-w-xs w-full p-6 shadow-xl text-center">
+            <div class="w-10 h-10 bg-brand-tealLight border border-brand-tealBorder rounded-full flex items-center justify-center mx-auto mb-3 text-brand-teal font-bold text-sm">🔒</div>
+            <h3 class="text-sm font-bold text-clinical-text uppercase tracking-wider">Owner PIN Required</h3>
+            <p class="text-xs text-clinical-muted mt-1 mb-4">Enter business owner PIN to access financial and performance reports.</p>
+            
+            <input type="password" x-model="pinInput" maxlength="6" @keyup.enter="verifyOwnerPin()" 
+                   placeholder="Enter PIN" class="w-full text-center text-lg font-mono tracking-widest border border-clinical-borderDark rounded py-2 mb-2 focus:outline-none focus:border-brand-teal">
+            
+            <p x-show="pinError" class="text-[11px] text-rose-600 font-semibold mb-3">Incorrect PIN. Access Denied.</p>
+
+            <div class="flex gap-2 mt-2">
+                <button @click="showPinModal = false; pinError = false; pinInput = '';" class="w-1/2 bg-slate-100 text-clinical-text text-xs font-semibold py-2 rounded">Cancel</button>
+                <button @click="verifyOwnerPin()" class="w-1/2 bg-brand-teal text-white text-xs font-semibold py-2 rounded">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD NEW MEDICINE ITEM -->
+    <div x-show="showAddMedModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-white border border-clinical-border rounded max-w-md w-full p-6 shadow-lg">
+            <h3 class="text-sm font-bold text-clinical-text uppercase tracking-wider mb-4">Add New Medicine Item</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold uppercase text-clinical-muted mb-1">Medicine Name & Strength</label>
+                    <input type="text" x-model="newMedForm.name" placeholder="e.g. Ciprofloxacin 500mg" class="w-full border border-clinical-borderDark rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block font-semibold uppercase text-clinical-muted mb-1">Supplier</label>
+                    <input type="text" x-model="newMedForm.supplier" placeholder="e.g. Abacus Pharma" class="w-full border border-clinical-borderDark rounded px-3 py-2">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block font-semibold uppercase text-clinical-muted mb-1">Reorder Level</label>
+                        <input type="number" x-model.number="newMedForm.reorderThreshold" class="w-full border border-clinical-borderDark rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block font-semibold uppercase text-clinical-muted mb-1">Unit Cost</label>
+                        <input type="number" x-model.number="newMedForm.unitCost" class="w-full border border-clinical-borderDark rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block font-semibold uppercase text-clinical-muted mb-1">Selling Price</label>
+                        <input type="number" x-model.number="newMedForm.sellingPrice" class="w-full border border-clinical-borderDark rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button @click="showAddMedModal = false" class="w-1/2 bg-slate-100 text-clinical-text text-xs font-semibold py-2 rounded">Cancel</button>
+                <button @click="submitNewMedicine()" class="w-1/2 bg-brand-teal text-white text-xs font-semibold py-2 rounded">Save Item</button>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL: STOCK IN / OUT TRANSACTION -->
@@ -517,23 +574,30 @@
                 seedDemoData: true,
                 activeTab: 'stock-movement',
                 showStockModal: false,
+                showAddMedModal: false,
+                showPinModal: false,
+                isOwnerUnlocked: false,
+                pinInput: '',
+                pinError: false,
                 stockModalType: 'IN',
 
                 config: {
                     isOnboarded: false,
                     storeName: '',
                     currency: 'UGX',
-                    expiryWarningDays: 90
+                    expiryWarningDays: 90,
+                    ownerPin: '1234'
                 },
 
-                adminForm: { name: '', pin: '' },
-                currentUser: { id: 'usr-1', name: 'Dr. Sarah Namubiru', role: 'OWNER' },
+                adminForm: { name: '' },
+                currentUser: { name: 'Dispenser / Staff' },
 
                 inventory: [],
                 batches: [],
                 logs: [],
 
                 stockForm: { itemId: '', batchNumber: '', expiryDate: '', qty: 0 },
+                newMedForm: { name: '', supplier: '', reorderThreshold: 10, unitCost: 0, sellingPrice: 0 },
 
                 initSystem() {
                     const savedConfig = localStorage.getItem('pharma_config_mvp');
@@ -559,11 +623,11 @@
                             { id: 'b1', itemId: 'med-1', batchNumber: 'AMX-2025-01', expiryDate: '2026-08-15', qty: 30 },
                             { id: 'b2', itemId: 'med-1', batchNumber: 'AMX-2026-09', expiryDate: '2026-10-10', qty: 5 },
                             { id: 'b3', itemId: 'med-2', batchNumber: 'PARA-8812', expiryDate: '2027-05-20', qty: 4 },
-                            { id: 'b4', itemId: 'med-3', batchNumber: 'MET-4011', expiryDate: '2026-07-01', qty: 12 } // EXPIRED SAMPLE
+                            { id: 'b4', itemId: 'med-3', batchNumber: 'MET-4011', expiryDate: '2026-07-01', qty: 12 }
                         ];
 
                         this.logs = [
-                            { id: 'l1', timestamp: new Date().toISOString(), type: 'IN', itemId: 'med-1', itemName: 'Amoxicillin 500mg', batchNumber: 'AMX-2025-01', expiryDate: '2026-08-15', qty: 30, totalPrice: 540000, userName: this.currentUser.name }
+                            { id: 'l1', timestamp: new Date().toISOString(), type: 'IN', itemId: 'med-1', itemName: 'Amoxicillin 500mg', batchNumber: 'AMX-2025-01', expiryDate: '2026-08-15', qty: 30, totalPrice: 540000, userName: 'System Seed' }
                         ];
                     }
 
@@ -577,11 +641,68 @@
                     localStorage.setItem('pharma_logs_mvp', JSON.stringify(this.logs));
                 },
 
-                toggleUserRole() {
-                    this.currentUser.role = this.currentUser.role === 'OWNER' ? 'DISPENSER' : 'OWNER';
-                    if (this.currentUser.role === 'DISPENSER' && this.activeTab === 'reports') {
+                handleReportsTabClick() {
+                    if (this.isOwnerUnlocked) {
+                        this.activeTab = 'reports';
+                    } else {
+                        this.pinInput = '';
+                        this.pinError = false;
+                        this.showPinModal = true;
+                    }
+                },
+
+                verifyOwnerPin() {
+                    if (this.pinInput === this.config.ownerPin) {
+                        this.isOwnerUnlocked = true;
+                        this.showPinModal = false;
+                        this.pinError = false;
+                        this.activeTab = 'reports';
+                    } else {
+                        this.pinError = true;
+                    }
+                },
+
+                lockOwnerAccess() {
+                    this.isOwnerUnlocked = false;
+                    if (this.activeTab === 'reports') {
                         this.activeTab = 'stock-movement';
                     }
+                },
+
+                clearOperationalData() {
+                    if (confirm('Clear all items, batches, and log history for production start? This keeps your pharmacy setup & PIN.')) {
+                        this.inventory = [];
+                        this.batches = [];
+                        this.logs = [];
+                        this.saveState();
+                        alert('System database cleared successfully. Ready for staff data entry.');
+                    }
+                },
+
+                fullSystemReset() {
+                    if (confirm('Factory reset system? This clears setup configuration and all saved data.')) {
+                        localStorage.clear();
+                        location.reload();
+                    }
+                },
+
+                openAddMedicineModal() {
+                    this.newMedForm = { name: '', supplier: '', reorderThreshold: 10, unitCost: 0, sellingPrice: 0 };
+                    this.showAddMedModal = true;
+                },
+
+                submitNewMedicine() {
+                    if (!this.newMedForm.name) return;
+                    this.inventory.push({
+                        id: 'med-' + Date.now(),
+                        name: this.newMedForm.name,
+                        supplier: this.newMedForm.supplier,
+                        reorderThreshold: Number(this.newMedForm.reorderThreshold),
+                        unitCost: Number(this.newMedForm.unitCost),
+                        sellingPrice: Number(this.newMedForm.sellingPrice)
+                    });
+                    this.saveState();
+                    this.showAddMedModal = false;
                 },
 
                 getTotalStock(itemId) {
@@ -620,7 +741,7 @@
                                 qty: Number(this.stockForm.qty)
                             });
                         }
-                    } else { // OUT
+                    } else {
                         if (!batch || batch.qty < this.stockForm.qty) {
                             alert('Insufficient stock in specified batch!');
                             return;
@@ -638,7 +759,7 @@
                         expiryDate: batch ? batch.expiryDate : this.stockForm.expiryDate,
                         qty: Number(this.stockForm.qty),
                         totalPrice: Number(this.stockForm.qty) * item.sellingPrice,
-                        userName: this.currentUser.name
+                        userName: this.isOwnerUnlocked ? 'Owner' : 'Staff / Dispenser'
                     });
 
                     this.saveState();
@@ -710,13 +831,6 @@
 
                 formatDate(isoStr) {
                     return new Date(isoStr).toLocaleString();
-                },
-
-                resetSystem() {
-                    if (confirm('Reset prototype data?')) {
-                        localStorage.clear();
-                        location.reload();
-                    }
                 }
             }
         }
